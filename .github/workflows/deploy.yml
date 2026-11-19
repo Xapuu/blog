@@ -1,0 +1,46 @@
+name: Build & Deploy Static Site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  # Daily 06:00 UTC (08:00 Sofia time) cron in December to unlock scheduled Advent posts automatically
+  schedule:
+    - cron: '0 6 * 12 *'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies deterministically (Day 13 & Day 14 practice)
+        run: |
+          npm ci --ignore-scripts
+          npm rebuild esbuild sharp
+
+      - name: Typecheck & Build Static Site
+        env:
+          ENFORCE_PUBDATE_GATE: 'true'
+        run: npm run build
+
+      - name: Deploy to Firebase Hosting
+        if: ${{ env.FIREBASE_SERVICE_ACCOUNT != '' }}
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: ${{ vars.FIREBASE_PROJECT_ID }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

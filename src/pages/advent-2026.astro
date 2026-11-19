@@ -1,0 +1,223 @@
+---
+import { getCollection, type CollectionEntry } from 'astro:content';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { formatDate, getReadingTime } from '@components/readingTime';
+import { isPostVisible } from '@components/postVisibility';
+
+const allAdventPosts = await getCollection(
+  'blog',
+  ({ data }) => data.series === 'advent-2026'
+);
+
+const postByDay = new Map<number, CollectionEntry<'blog'>>();
+for (const post of allAdventPosts) {
+  if (typeof post.data.adventDay === 'number') {
+    postByDay.set(post.data.adventDay, post);
+  }
+}
+
+const days = Array.from({ length: 24 }, (_, idx) => {
+  const dayNumber = idx + 1;
+  const formattedDay = String(dayNumber).padStart(2, '0');
+  const post = postByDay.get(dayNumber) ?? null;
+  const isUnlocked = Boolean(post && isPostVisible(post));
+  const isDraftPreview = Boolean(post && post.data.draft && import.meta.env.DEV);
+  return {
+    dayNumber,
+    formattedDay,
+    post,
+    isUnlocked,
+    isDraftPreview,
+  };
+});
+
+const weeks = [
+  {
+    number: 1,
+    title: 'Week 1: Frontend & Browser Traps',
+    subtitle:
+      'Content Security Policy exfiltration guards, route isolation, dev server bindings, HttpOnly cookies, postMessage validation, and Subresource Integrity.',
+    days: days.slice(0, 6),
+  },
+  {
+    number: 2,
+    title: 'Week 2: Secrets, Tokens & AI Tooling',
+    subtitle:
+      'Auditing forgotten PATs, sandboxing untrusted repos, hardening IDE extensions & MCP servers, keeping secrets out of docs/prompts, CI OIDC federation, and Git history scanning.',
+    days: days.slice(6, 12),
+  },
+  {
+    number: 3,
+    title: 'Week 3: Dependencies & Supply Chain',
+    subtitle:
+      'Deterministic frozen lockfiles, disabling postinstall lifecycle scripts, patching transitive trees, pinning Docker digests, non-root containers, and stack-aware CVE triage.',
+    days: days.slice(12, 18),
+  },
+  {
+    number: 4,
+    title: 'Week 4: Backend, Databases & Ops',
+    subtitle:
+      'Least-privilege database runtime roles, firewalling database wire ports, SSRF outbound validation, headless Chromium container rebuilds, tenant-scoped RBAC/IDOR guards, and the holiday freeze checklist.',
+    days: days.slice(18, 24),
+  },
+];
+
+const publishedCount = days.filter((d) => d.post && !d.post.data.draft).length;
+const progressPercentage = Math.round((publishedCount / 24) * 100);
+---
+
+<BaseLayout
+  title="2026 DevSec Advent Calendar — 24 Days of Web Security"
+  description="24-day technical advent calendar covering Content Security Policy, browser isolation headers, supply-chain hardening, and defensive JavaScript architecture."
+>
+  <header class="border-b border-border pb-8">
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 font-mono text-xs font-medium text-accent">
+        <span>December 2026 Series</span>
+        <span>&bull;</span>
+        <span>{publishedCount}/24 Published</span>
+      </div>
+      {
+        import.meta.env.DEV && (
+          <span class="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 font-mono text-xs font-medium text-amber-400">
+            Dev Mode: All 24 Drafts Clickable
+          </span>
+        )
+      }
+    </div>
+
+    <h1 class="mt-4 text-3xl font-bold tracking-tight text-gray-100 sm:text-4xl">
+      2026 DevSec Advent Calendar
+    </h1>
+
+    <p class="mt-3 max-w-3xl text-base leading-relaxed text-gray-300">
+      Twenty-four focused security briefs for frontend, Node.js, and DevOps engineers. Each door
+      explores a concrete attack vector backed by real-world 2026 breach receipts, why default
+      configurations fail, and a production-ready fix you can ship in minutes.
+    </p>
+
+    <!-- Progress Bar -->
+    <div class="mt-6 max-w-md">
+      <div class="mb-1.5 flex items-center justify-between font-mono text-xs text-gray-400">
+        <span>Series Progress</span>
+        <span class="text-accent">{publishedCount} of 24 Days ({progressPercentage}%)</span>
+      </div>
+      <div class="h-2 w-full overflow-hidden rounded-full bg-surface border border-border">
+        <div
+          class="h-full bg-accent transition-all"
+          style={`width: ${Math.max(4, progressPercentage)}%`}
+        />
+      </div>
+    </div>
+  </header>
+
+  <div class="mt-10 space-y-12">
+    {
+      weeks.map((week) => (
+        <section aria-label={week.title}>
+          <div class="mb-5 border-l-2 border-accent pl-4">
+            <h2 class="text-xl font-bold tracking-tight text-gray-100">{week.title}</h2>
+            <p class="mt-1 text-sm text-gray-400">{week.subtitle}</p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {week.days.map(({ dayNumber, formattedDay, post, isUnlocked, isDraftPreview }) =>
+              isUnlocked && post ? (
+                <a
+                  href={`/blog/${post.slug}`}
+                  class:list={[
+                    'group relative flex flex-col justify-between rounded-xl border bg-surface p-5 transition-all hover:bg-surface-hover',
+                    isDraftPreview
+                      ? 'border-amber-500/30 hover:border-amber-400'
+                      : 'border-emerald-500/40 hover:border-accent',
+                  ]}
+                >
+                  <div>
+                    <div class="flex items-center justify-between gap-2 font-mono text-xs">
+                      <span
+                        class:list={[
+                          'inline-flex items-center gap-1.5 rounded border px-2 py-0.5 font-semibold',
+                          isDraftPreview
+                            ? 'border-amber-500/40 bg-amber-500/10 text-amber-400'
+                            : 'border-emerald-500/30 bg-emerald-500/10 text-accent',
+                        ]}
+                      >
+                        <span
+                          class:list={[
+                            'h-1.5 w-1.5 rounded-full',
+                            isDraftPreview ? 'bg-amber-400' : 'bg-accent',
+                          ]}
+                        />
+                        Day {formattedDay} {isDraftPreview ? '(Draft)' : ''}
+                      </span>
+                      <span class="text-gray-400">{getReadingTime(post.body)}</span>
+                    </div>
+
+                    <h3 class="mt-3.5 text-base font-semibold leading-snug text-gray-100 transition-colors group-hover:text-accent">
+                      {post.data.title}
+                    </h3>
+
+                    <p class="mt-2 line-clamp-3 text-xs leading-relaxed text-gray-400">
+                      {post.data.description}
+                    </p>
+                  </div>
+
+                  <div class="mt-5 flex items-center justify-between border-t border-border pt-3 font-mono text-xs">
+                    <time datetime={post.data.pubDate.toISOString()} class="text-gray-400">
+                      {formatDate(post.data.pubDate)}
+                    </time>
+                    <span class="font-medium text-accent transition-transform group-hover:translate-x-0.5">
+                      Read Day {formattedDay} &rarr;
+                    </span>
+                  </div>
+                </a>
+              ) : (
+                <div
+                  aria-disabled="true"
+                  class="flex flex-col justify-between rounded-xl border border-border/70 bg-surface/40 p-5 opacity-70"
+                >
+                  <div>
+                    <div class="flex items-center justify-between gap-2 font-mono text-xs">
+                      <span class="inline-flex items-center gap-1.5 rounded border border-border bg-canvas px-2 py-0.5 text-gray-400">
+                        Day {formattedDay}
+                      </span>
+                      <span class="inline-flex items-center gap-1 text-gray-500">
+                        <svg
+                          class="h-3.5 w-3.5"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          aria-hidden="true"
+                        >
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        Locked
+                      </span>
+                    </div>
+
+                    <h3 class="mt-3.5 text-sm font-semibold leading-snug text-gray-300">
+                      {post ? post.data.title : `Dec ${formattedDay}, 2026 — Coming Soon`}
+                    </h3>
+
+                    <p class="mt-2 line-clamp-2 text-xs leading-relaxed text-gray-500">
+                      {post
+                        ? post.data.description
+                        : `Scheduled DevSec deep dive for Day ${dayNumber} of the 2026 Advent series.`}
+                    </p>
+                  </div>
+
+                  <div class="mt-5 flex items-center justify-between border-t border-border/50 pt-3 font-mono text-[11px] text-gray-500">
+                    <span>2026-12-{formattedDay}</span>
+                    <span>Unlocks Dec {formattedDay}</span>
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+</BaseLayout>

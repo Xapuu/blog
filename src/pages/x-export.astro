@@ -1,0 +1,1748 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="X Card Studio — Export X Posts as Shareable Images"
+  description="Turn any X (Twitter) post into a crisp, customizable social card and export as a high-resolution PNG."
+>
+  <div class="x-studio-wrapper">
+    <!-- Studio Header / URL Bar -->
+    <div class="studio-topbar">
+      <div class="studio-brand">
+        <div class="studio-logo">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-base font-bold tracking-tight text-gray-100">X Card Studio</h1>
+          <span class="block font-mono text-xs text-gray-400">
+            Turn any X post into a crisp shareable card
+          </span>
+        </div>
+      </div>
+
+      <form id="url-form" class="url-bar">
+        <div class="input-wrapper">
+          <svg
+            class="link-icon"
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+          </svg>
+          <input
+            type="text"
+            id="tweet-url-input"
+            placeholder="Paste X / Twitter link (e.g. https://x.com/IvanovXapu/status/2123074878677172637)"
+            value="https://x.com/IvanovXapu/status/2123074878677172637"
+            required
+          />
+          <button type="button" id="clear-btn" class="icon-btn" title="Clear URL">✕</button>
+        </div>
+        <button type="submit" id="fetch-btn" class="primary-btn">
+          <span>Load Post</span>
+        </button>
+      </form>
+
+      <div class="export-actions">
+        <button
+          type="button"
+          id="copy-img-btn"
+          class="secondary-btn"
+          title="Copy PNG image to clipboard"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="15"
+            height="15"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+          <span>Copy Image</span>
+        </button>
+        <button type="button" id="download-btn" class="accent-btn">
+          <svg
+            viewBox="0 0 24 24"
+            width="15"
+            height="15"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span>Download PNG</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Status Banner -->
+    <div id="status-banner" class="status-banner hidden">
+      <span id="status-message"></span>
+      <button type="button" id="close-banner-btn" class="banner-close">✕</button>
+    </div>
+
+    <!-- Main Studio Workspace -->
+    <div class="workspace">
+      <!-- Left Sidebar Controls -->
+      <aside class="sidebar">
+        <!-- Sample Presets -->
+        <section class="control-group">
+          <label class="group-title">Recent @IvanovXapu Posts</label>
+          <div class="preset-pills">
+            <button
+              type="button"
+              id="sync-latest-btn"
+              class="pill-btn"
+              style="border-color: rgba(16, 185, 129, 0.45); color: #10b981;"
+            >
+              ↻ Sync Latest
+            </button>
+            <button
+              type="button"
+              class="pill-btn"
+              data-url="https://x.com/IvanovXapu/status/2123074878677172637"
+            >
+              #1 Vite Dev Server RCE
+            </button>
+            <button
+              type="button"
+              class="pill-btn"
+              data-url="https://x.com/IvanovXapu/status/2122957764926357642"
+            >
+              #2 3rd-Party JS (178 Sites)
+            </button>
+            <button
+              type="button"
+              class="pill-btn"
+              data-url="https://x.com/IvanovXapu/status/2122601097114296603"
+            >
+              #3 Oracle &amp; Postgres CVEs
+            </button>
+            <button
+              type="button"
+              class="pill-btn"
+              data-url="https://x.com/IvanovXapu/status/2122247887505576345"
+            >
+              #4 GitHub PATs / Cursor
+            </button>
+          </div>
+        </section>
+
+        <!-- Background Gradient -->
+        <section class="control-group">
+          <label class="group-title">Background Canvas</label>
+          <div class="bg-swatches" id="bg-swatches">
+            <button
+              type="button"
+              class="swatch"
+              data-bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+              style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"
+              title="Royal Dusk"
+            />
+            <button
+              type="button"
+              class="swatch"
+              data-bg="linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%)"
+              style="background: linear-gradient(135deg, #FF6B6B 0%, #FFE66D 100%);"
+              title="Sunset Glow"
+            />
+            <button
+              type="button"
+              class="swatch"
+              data-bg="linear-gradient(135deg, #0ea5e9 0%, #2563eb 50%, #7c3aed 100%)"
+              style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 50%, #7c3aed 100%);"
+              title="Oceanic Electric"
+            />
+            <button
+              type="button"
+              class="swatch active"
+              data-bg="linear-gradient(135deg, #10b981 0%, #047857 50%, #064e3b 100%)"
+              style="background: linear-gradient(135deg, #10b981 0%, #047857 50%, #064e3b 100%);"
+              title="Emerald Forest"
+            />
+            <button
+              type="button"
+              class="swatch"
+              data-bg="linear-gradient(135deg, #f43f5e 0%, #a855f7 50%, #6366f1 100%)"
+              style="background: linear-gradient(135deg, #f43f5e 0%, #a855f7 50%, #6366f1 100%);"
+              title="Neon Berry"
+            />
+            <button
+              type="button"
+              class="swatch"
+              data-bg="linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)"
+              style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);"
+              title="Midnight Slate"
+            />
+            <button
+              type="button"
+              class="swatch"
+              data-bg="linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)"
+              style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);"
+              title="Minimalist Alabaster"
+            />
+            <button
+              type="button"
+              class="swatch"
+              data-bg="transparent"
+              style="background: repeating-conic-gradient(#334155 0% 25%, #1e293b 0% 50%) 50% / 12px 12px;"
+              title="Transparent PNG"
+            />
+          </div>
+        </section>
+
+        <!-- Card Theme -->
+        <section class="control-group">
+          <label class="group-title">Card Theme</label>
+          <div class="segmented-control" id="theme-control">
+            <button type="button" class="seg-btn" data-theme="light">Light</button>
+            <button type="button" class="seg-btn active" data-theme="dim">Dim</button>
+            <button type="button" class="seg-btn" data-theme="dark">Lights Out</button>
+            <button type="button" class="seg-btn" data-theme="glass">Glass</button>
+          </div>
+        </section>
+
+        <!-- Target Aspect Ratio -->
+        <section class="control-group">
+          <label class="group-title">Social Format / Ratio</label>
+          <div class="segmented-control grid-2" id="ratio-control">
+            <button type="button" class="seg-btn active" data-ratio="auto">Auto Fit</button>
+            <button type="button" class="seg-btn" data-ratio="square">1:1 Square</button>
+            <button type="button" class="seg-btn" data-ratio="portrait">4:5 IG Post</button>
+            <button type="button" class="seg-btn" data-ratio="story">9:16 Story</button>
+            <button type="button" class="seg-btn" data-ratio="wide">16:9 Social</button>
+          </div>
+        </section>
+
+        <!-- Layout & Spacing -->
+        <section class="control-group">
+          <div class="slider-header">
+            <label class="group-title">Outer Padding</label>
+            <span id="padding-val" class="slider-val">48px</span>
+          </div>
+          <input type="range" id="padding-slider" min="0" max="120" value="48" step="4" />
+
+          <div class="slider-header" style="margin-top: 10px;">
+            <label class="group-title">Card Width</label>
+            <span id="width-val" class="slider-val">540px</span>
+          </div>
+          <input type="range" id="width-slider" min="380" max="760" value="540" step="10" />
+
+          <div class="slider-header" style="margin-top: 10px;">
+            <label class="group-title">Text Size</label>
+            <span id="font-val" class="slider-val">19px</span>
+          </div>
+          <input type="range" id="font-slider" min="15" max="28" value="19" step="1" />
+        </section>
+
+        <!-- Visibility Toggles -->
+        <section class="control-group">
+          <label class="group-title">Card Elements</label>
+          <div class="toggle-list">
+            <label class="toggle-row">
+              <span>Verified Badge</span>
+              <input type="checkbox" id="toggle-verified" checked />
+            </label>
+            <label class="toggle-row">
+              <span>X Brand Logo</span>
+              <input type="checkbox" id="toggle-logo" checked />
+            </label>
+            <label class="toggle-row">
+              <span>Post Media / Image</span>
+              <input type="checkbox" id="toggle-media" checked />
+            </label>
+            <label class="toggle-row">
+              <span>Timestamp Footer</span>
+              <input type="checkbox" id="toggle-date" checked />
+            </label>
+            <label class="toggle-row">
+              <span>Engagement Metrics</span>
+              <input type="checkbox" id="toggle-metrics" checked />
+            </label>
+            <label class="toggle-row">
+              <span>Watermark / Handle Bar</span>
+              <input type="checkbox" id="toggle-watermark" />
+            </label>
+          </div>
+        </section>
+
+        <!-- Custom Image Attachment -->
+        <section class="control-group">
+          <label class="group-title">Custom Media / Avatar</label>
+          <div class="upload-btns">
+            <label class="upload-btn">
+              <input type="file" id="upload-avatar" accept="image/*" hidden />
+              <span>Upload Avatar</span>
+            </label>
+            <label class="upload-btn">
+              <input type="file" id="upload-media" accept="image/*" hidden />
+              <span>Attach Photo</span>
+            </label>
+          </div>
+          <p class="hint-text">
+            Tip: Click directly on any text, name, or metric inside the card to edit it live before
+            exporting.
+          </p>
+        </section>
+      </aside>
+
+      <!-- Center Preview Stage -->
+      <section class="stage-container">
+        <div class="stage-scroll">
+          <!-- Export Target Wrapper -->
+          <div
+            id="export-canvas"
+            class="export-canvas ratio-auto"
+            style="background: linear-gradient(135deg, #10b981 0%, #047857 50%, #064e3b 100%);"
+          >
+            <div id="tweet-card" class="tweet-card theme-dim">
+              <!-- Card Header -->
+              <div class="card-header">
+                <div class="author-info">
+                  <div class="avatar-wrap" id="avatar-wrap" title="Click to upload custom avatar">
+                    <img
+                      id="card-avatar"
+                      class="card-avatar"
+                      src="/avatar-ivanovxapu.jpg"
+                      alt="Avatar"
+                      crossorigin="anonymous"
+                    />
+                    <div id="avatar-fallback" class="avatar-fallback hidden">HI</div>
+                  </div>
+                  <div class="author-meta">
+                    <div class="author-name-row">
+                      <span
+                        id="card-name"
+                        class="author-name"
+                        contenteditable="true"
+                        spellcheck="false">Hristiqn</span
+                      >
+                      <span id="card-verified" class="verified-badge" title="Verified">
+                        <svg viewBox="0 0 22 22" width="18" height="18" fill="#1d9bf0">
+                          <path d="M20.396 11c-.018-.646-.215-1.275-.57-1.816-.354-.54-.852-.972-1.438-1.246.223-.607.27-1.264.14-1.897-.131-.634-.437-1.218-.882-1.687-.47-.445-1.053-.75-1.687-.882-.633-.13-1.29-.083-1.897.14-.273-.587-.704-1.086-1.245-1.44S11.647 1.62 11 1.604c-.646.017-1.273.213-1.813.568s-.969.854-1.24 1.44c-.608-.223-1.267-.272-1.902-.14-.635.13-1.22.436-1.69.882-.445.47-.749 1.055-.878 1.688-.13.633-.08 1.29.144 1.896-.587.274-1.087.705-1.443 1.245-.356.54-.555 1.17-.574 1.817.02.647.218 1.276.574 1.817.356.54.856.972 1.443 1.245-.224.606-.274 1.263-.144 1.896.13.634.433 1.218.877 1.688.47.443 1.054.747 1.687.878.633.132 1.29.084 1.897-.136.274.586.705 1.084 1.246 1.439.54.354 1.17.551 1.816.569.647-.016 1.276-.213 1.817-.567s.972-.854 1.245-1.44c.604.239 1.266.296 1.903.164.636-.132 1.22-.447 1.68-.907.46-.46.776-1.044.908-1.681s.075-1.299-.165-1.903c.586-.274 1.084-.705 1.439-1.246.354-.54.551-1.17.569-1.816zM9.662 14.85l-3.429-3.428 1.293-1.302 2.072 2.072 4.4-4.794 1.347 1.246z" />
+                        </svg>
+                      </span>
+                    </div>
+                    <div
+                      id="card-handle"
+                      class="author-handle"
+                      contenteditable="true"
+                      spellcheck="false"
+                    >
+                      @IvanovXapu
+                    </div>
+                  </div>
+                </div>
+                <div id="card-logo" class="x-logo">
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Card Body Text (Pre-populated with latest tweet from @IvanovXapu) -->
+              <div id="card-text" class="card-text" contenteditable="true" spellcheck="false">Don't forget there is a reason why there is a reminder for not using dev serve on prod</div>
+
+              <!-- Quoted Tweet (optional) -->
+              <div id="card-quote" class="card-quote">
+                <div class="quote-header">
+                  <span id="quote-name" class="quote-name" contenteditable="true">Vite ⚡</span>
+                  <span id="quote-handle" class="quote-handle" contenteditable="true">@vite_js</span>
+                </div>
+                <div id="quote-text" class="quote-text" contenteditable="true">We've published a critical advisory affecting the dev server.
+
+https://github.com/vitejs/vite/security/advisories/GHSA-p4f5-76q4-ffq7
+
+Please make sure to update now to the patched versions (or newer if available)
+- Vite 8.3.7, 8.2.5, 8.1.7, 7.3.8, 6.4.6
+- Vite+ 1.5.1</div>
+              </div>
+
+              <!-- Media Grid (optional) -->
+              <div id="card-media-container" class="card-media hidden">
+                <img id="card-media-img" src="" alt="Post attachment" crossorigin="anonymous" />
+              </div>
+
+              <!-- Timestamp -->
+              <div id="card-date" class="card-date" contenteditable="true" spellcheck="false">
+                5:24 PM · Nov 18, 2026
+              </div>
+
+              <!-- Metrics Footer -->
+              <div id="card-metrics" class="card-metrics">
+                <div class="metric-item">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="17"
+                    height="17"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                  </svg>
+                  <span id="metric-replies" contenteditable="true">0</span>
+                </div>
+                <div class="metric-item">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="17"
+                    height="17"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <polyline points="17 1 21 5 17 9" />
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                    <polyline points="7 23 3 19 7 15" />
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                  </svg>
+                  <span id="metric-retweets" contenteditable="true">0</span>
+                </div>
+                <div class="metric-item metric-likes">
+                  <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor">
+                    <path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91z" />
+                  </svg>
+                  <span id="metric-likes" contenteditable="true">0</span>
+                </div>
+                <div class="metric-item">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="17"
+                    height="17"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <line x1="18" y1="20" x2="18" y2="10" />
+                    <line x1="12" y1="20" x2="12" y2="4" />
+                    <line x1="6" y1="20" x2="6" y2="14" />
+                  </svg>
+                  <span id="metric-views" contenteditable="true">5</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Optional Watermark Pill -->
+            <div
+              id="card-watermark"
+              class="card-watermark hidden"
+              contenteditable="true"
+              spellcheck="false"
+            >
+              x.com/IvanovXapu
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden">Copied to clipboard!</div>
+
+  <style>
+    :root {
+      --card-width: 540px;
+      --card-padding: 48px;
+      --card-font-size: 19px;
+    }
+
+    .x-studio-wrapper {
+      border: 1px solid #1f2937;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #090d16;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+    }
+
+    .studio-topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 18px;
+      background: #111827;
+      border-bottom: 1px solid #1f2937;
+    }
+
+    .studio-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .studio-logo {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #10b981;
+    }
+
+    .url-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .link-icon {
+      position: absolute;
+      left: 12px;
+      color: #94a3b8;
+      pointer-events: none;
+    }
+
+    #tweet-url-input {
+      width: 100%;
+      padding: 8px 32px 8px 36px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #0b0f17;
+      color: #f8fafc;
+      font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #tweet-url-input:focus {
+      border-color: #10b981;
+    }
+
+    .icon-btn {
+      position: absolute;
+      right: 8px;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 4px;
+    }
+
+    .icon-btn:hover {
+      color: #f8fafc;
+    }
+
+    .primary-btn,
+    .secondary-btn,
+    .accent-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 13px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .primary-btn {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid #334155;
+    }
+
+    .primary-btn:hover {
+      border-color: #10b981;
+      color: #10b981;
+    }
+
+    .secondary-btn {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+    }
+
+    .secondary-btn:hover {
+      background: #334155;
+    }
+
+    .accent-btn {
+      background: #10b981;
+      color: #0b0f17;
+    }
+
+    .accent-btn:hover {
+      background: #34d399;
+    }
+
+    .export-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .status-banner {
+      background: rgba(16, 185, 129, 0.12);
+      border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+      color: #a7f3d0;
+      font-size: 12px;
+      padding: 8px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .banner-close {
+      background: none;
+      border: none;
+      color: #6ee7b7;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .workspace {
+      display: flex;
+      flex-direction: column;
+      min-height: 680px;
+    }
+
+    @media (min-width: 900px) {
+      .workspace {
+        flex-direction: row;
+      }
+    }
+
+    .sidebar {
+      width: 100%;
+      background: #111827;
+      border-bottom: 1px solid #1f2937;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      flex-shrink: 0;
+    }
+
+    @media (min-width: 900px) {
+      .sidebar {
+        width: 290px;
+        border-bottom: none;
+        border-right: 1px solid #1f2937;
+      }
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .group-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #94a3b8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .preset-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pill-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .pill-btn:hover {
+      border-color: #10b981;
+      color: #10b981;
+    }
+
+    .bg-swatches {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .swatch {
+      height: 34px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .swatch:hover {
+      transform: scale(1.04);
+    }
+
+    .swatch.active {
+      border-color: #fff;
+      box-shadow: 0 0 0 2px #10b981;
+    }
+
+    .segmented-control {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      background: #0b0f17;
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+      gap: 3px;
+    }
+
+    .segmented-control.grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .seg-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 6px 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .seg-btn:hover {
+      color: #fff;
+    }
+
+    .seg-btn.active {
+      background: #1e293b;
+      color: #10b981;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .slider-val {
+      font-size: 11.5px;
+      color: #cbd5e1;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    input[type='range'] {
+      width: 100%;
+      accent-color: #10b981;
+      cursor: pointer;
+    }
+
+    .toggle-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12.5px;
+      color: #e2e8f0;
+      cursor: pointer;
+      padding: 2px 0;
+    }
+
+    .toggle-row input[type='checkbox'] {
+      width: 15px;
+      height: 15px;
+      accent-color: #10b981;
+      cursor: pointer;
+    }
+
+    .upload-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .upload-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 8px;
+      background: #1e293b;
+      border: 1px dashed #475569;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #cbd5e1;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+
+    .upload-btn:hover {
+      border-color: #10b981;
+      color: #10b981;
+    }
+
+    .hint-text {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.45;
+    }
+
+    .stage-container {
+      flex: 1;
+      background-color: #080b12;
+      background-image: radial-gradient(#1e293b 1px, transparent 1px);
+      background-size: 20px 20px;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+    }
+
+    .stage-scroll {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100%;
+    }
+
+    .export-canvas {
+      padding: var(--card-padding);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: padding 0.2s ease;
+      border-radius: 6px;
+    }
+
+    .export-canvas.ratio-square {
+      aspect-ratio: 1 / 1;
+    }
+
+    .export-canvas.ratio-portrait {
+      aspect-ratio: 4 / 5;
+    }
+
+    .export-canvas.ratio-story {
+      aspect-ratio: 9 / 16;
+      padding-top: calc(var(--card-padding) * 1.6);
+      padding-bottom: calc(var(--card-padding) * 1.6);
+    }
+
+    .export-canvas.ratio-wide {
+      aspect-ratio: 16 / 9;
+      padding-left: calc(var(--card-padding) * 1.6);
+      padding-right: calc(var(--card-padding) * 1.6);
+    }
+
+    .tweet-card {
+      width: var(--card-width);
+      max-width: 100%;
+      border-radius: 22px;
+      padding: 28px;
+      box-shadow:
+        0 25px 50px -12px rgba(0, 0, 0, 0.38),
+        0 0 1px 1px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition:
+        background 0.2s,
+        color 0.2s,
+        width 0.15s;
+    }
+
+    .tweet-card.theme-light {
+      background: #ffffff;
+      color: #0f172a;
+      --muted-card: #64748b;
+      --border-card: #f1f5f9;
+      --quote-bg: #f8fafc;
+    }
+
+    .tweet-card.theme-dim {
+      background: #15202b;
+      color: #f7f9f9;
+      --muted-card: #8b98a5;
+      --border-card: #273340;
+      --quote-bg: #1e2732;
+    }
+
+    .tweet-card.theme-dark {
+      background: #000000;
+      color: #e7e9ea;
+      --muted-card: #71767b;
+      --border-card: #2f3336;
+      --quote-bg: #16181c;
+      box-shadow:
+        0 25px 50px -12px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(255, 255, 255, 0.12);
+    }
+
+    .tweet-card.theme-glass {
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: #ffffff;
+      --muted-card: rgba(255, 255, 255, 0.7);
+      --border-card: rgba(255, 255, 255, 0.14);
+      --quote-bg: rgba(255, 255, 255, 0.07);
+      box-shadow:
+        0 25px 50px -12px rgba(0, 0, 0, 0.4),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .author-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar-wrap {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+      cursor: pointer;
+      position: relative;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-avatar {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .avatar-fallback {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #10b981, #047857);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .author-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .author-name-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .author-name {
+      font-weight: 700;
+      font-size: 16px;
+      outline: none;
+    }
+
+    .verified-badge {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .author-handle {
+      font-size: 14px;
+      color: var(--muted-card);
+      outline: none;
+    }
+
+    .x-logo {
+      color: currentColor;
+      opacity: 0.85;
+    }
+
+    .card-text {
+      font-size: var(--card-font-size);
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      outline: none;
+    }
+
+    :global(.card-text .highlight) {
+      color: #1d9bf0;
+      font-weight: 500;
+    }
+
+    .card-quote {
+      background: var(--quote-bg);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .quote-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13.5px;
+    }
+
+    .quote-name {
+      font-weight: 700;
+    }
+
+    .quote-handle {
+      color: var(--muted-card);
+    }
+
+    .quote-text {
+      font-size: 14.5px;
+      line-height: 1.45;
+    }
+
+    .card-media {
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border-card);
+      max-height: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-media img {
+      width: 100%;
+      height: auto;
+      max-height: 420px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .card-date {
+      font-size: 13.5px;
+      color: var(--muted-card);
+      outline: none;
+    }
+
+    .card-metrics {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-card);
+      color: var(--muted-card);
+      font-size: 13.5px;
+      font-weight: 500;
+    }
+
+    .metric-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .metric-item span {
+      outline: none;
+    }
+
+    .metric-likes svg {
+      color: #f91880;
+    }
+
+    .card-watermark {
+      margin-top: 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.85);
+      background: rgba(0, 0, 0, 0.25);
+      padding: 4px 12px;
+      border-radius: 999px;
+      backdrop-filter: blur(8px);
+      outline: none;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    [contenteditable='true']:hover {
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35);
+      border-radius: 4px;
+    }
+
+    [contenteditable='true']:focus {
+      box-shadow: 0 0 0 2px #10b981;
+      border-radius: 4px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #10b981;
+      color: #0b0f17;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+      z-index: 100;
+    }
+  </style>
+
+  <script is:inline>
+    const urlForm = document.getElementById('url-form');
+    const urlInput = document.getElementById('tweet-url-input');
+    const clearBtn = document.getElementById('clear-btn');
+    const fetchBtn = document.getElementById('fetch-btn');
+    const copyImgBtn = document.getElementById('copy-img-btn');
+    const downloadBtn = document.getElementById('download-btn');
+
+    const statusBanner = document.getElementById('status-banner');
+    const statusMessage = document.getElementById('status-message');
+    const closeBannerBtn = document.getElementById('close-banner-btn');
+
+    const exportCanvas = document.getElementById('export-canvas');
+    const tweetCard = document.getElementById('tweet-card');
+
+    const cardAvatar = document.getElementById('card-avatar');
+    const avatarFallback = document.getElementById('avatar-fallback');
+    const avatarWrap = document.getElementById('avatar-wrap');
+    const cardName = document.getElementById('card-name');
+    const cardVerified = document.getElementById('card-verified');
+    const cardHandle = document.getElementById('card-handle');
+    const cardLogo = document.getElementById('card-logo');
+    const cardText = document.getElementById('card-text');
+    const cardQuote = document.getElementById('card-quote');
+    const quoteName = document.getElementById('quote-name');
+    const quoteHandle = document.getElementById('quote-handle');
+    const quoteText = document.getElementById('quote-text');
+    const cardMediaContainer = document.getElementById('card-media-container');
+    const cardMediaImg = document.getElementById('card-media-img');
+    const cardDate = document.getElementById('card-date');
+    const cardMetrics = document.getElementById('card-metrics');
+    const metricReplies = document.getElementById('metric-replies');
+    const metricRetweets = document.getElementById('metric-retweets');
+    const metricLikes = document.getElementById('metric-likes');
+    const metricViews = document.getElementById('metric-views');
+    const cardWatermark = document.getElementById('card-watermark');
+
+    const bgSwatches = document.getElementById('bg-swatches');
+    const themeControl = document.getElementById('theme-control');
+    const ratioControl = document.getElementById('ratio-control');
+    const paddingSlider = document.getElementById('padding-slider');
+    const paddingVal = document.getElementById('padding-val');
+    const widthSlider = document.getElementById('width-slider');
+    const widthVal = document.getElementById('width-val');
+    const fontSlider = document.getElementById('font-slider');
+    const fontVal = document.getElementById('font-val');
+
+    const toggleVerified = document.getElementById('toggle-verified');
+    const toggleLogo = document.getElementById('toggle-logo');
+    const toggleMedia = document.getElementById('toggle-media');
+    const toggleDate = document.getElementById('toggle-date');
+    const toggleMetrics = document.getElementById('toggle-metrics');
+    const toggleWatermark = document.getElementById('toggle-watermark');
+
+    const uploadAvatar = document.getElementById('upload-avatar');
+    const uploadMedia = document.getElementById('upload-media');
+    const toast = document.getElementById('toast');
+
+    let currentTweetId = '2123074878677172637';
+    let hasMediaAttachment = false;
+
+    const SEEDED_TWEETS = {
+      '2123074878677172637': {
+        id: '2123074878677172637',
+        text: "Don't forget there is a reason why there is a reminder for not using dev serve on prod",
+        created_timestamp: 1795015470000,
+        author: {
+          name: 'Hristiqn',
+          screen_name: 'IvanovXapu',
+          avatar_url: '/avatar-ivanovxapu.jpg',
+          verified: true,
+        },
+        metrics: { replies: 0, retweets: 0, likes: 0, views: 5 },
+        photos: [],
+        videos: [],
+        quote: {
+          author: { name: 'Vite ⚡', screen_name: 'vite_js' },
+          text: "We've published a critical advisory affecting the dev server.\n\nhttps://github.com/vitejs/vite/security/advisories/GHSA-p4f5-76q4-ffq7\n\nPlease make sure to update now to the patched versions (or newer if available)\n- Vite 8.3.7, 8.2.5, 8.1.7, 7.3.8, 6.4.6\n- Vite+ 1.5.1",
+        },
+      },
+      '2122957764926357642': {
+        id: '2122957764926357642',
+        text: '2FA on. Servers patched. CI security checks green.\n\nThen a 3rd-party A/B testing script compromises 178 major sites overnight.\n\nHello my old friend, JavaScript.',
+        created_timestamp: 1794987548000,
+        author: {
+          name: 'Hristiqn',
+          screen_name: 'IvanovXapu',
+          avatar_url: '/avatar-ivanovxapu.jpg',
+          verified: true,
+        },
+        metrics: { replies: 0, retweets: 0, likes: 0, views: 12 },
+        photos: [],
+        videos: [],
+        quote: null,
+      },
+      '2122601097114296603': {
+        id: '2122601097114296603',
+        text: 'Oracle really looked at PostgreSQL dropping 52 CVEs last week and said: "Hold my database."\n\nToday\'s November Critical Security Patch Update drops CVSS 9.9 flaws across Oracle Database & Supply Chain—no active DB user required—plus CVSS 9.8 in APEX & ORDS.\n\nJust another Tuesday.',
+        created_timestamp: 1794902512000,
+        author: {
+          name: 'Hristiqn',
+          screen_name: 'IvanovXapu',
+          avatar_url: '/avatar-ivanovxapu.jpg',
+          verified: true,
+        },
+        metrics: { replies: 0, retweets: 0, likes: 0, views: 18 },
+        photos: [],
+        videos: [],
+        quote: null,
+      },
+      '2122247887505576345': {
+        id: '2122247887505576345',
+        text: 'Be honest: how many active GitHub PATs, old API keys, or "temporary" test credentials are sitting forgotten in your account or side projects right now?\n\nCursor\'s new post-mortem shows how a single stolen third-party vendor key unlocked unredacted credentials from 2025 coding logs',
+        created_timestamp: 1794818300000,
+        author: {
+          name: 'Hristiqn',
+          screen_name: 'IvanovXapu',
+          avatar_url: '/avatar-ivanovxapu.jpg',
+          verified: true,
+        },
+        metrics: { replies: 1, retweets: 0, likes: 0, views: 15 },
+        photos: [],
+        videos: [],
+        quote: null,
+      },
+    };
+
+    function parseTweetUrl(input) {
+      const trimmed = (input || '').trim();
+      const urlMatch = trimmed.match(/(?:x\.com|twitter\.com)\/([a-zA-Z0-9_]+)\/status\/(\d+)/i);
+      if (urlMatch) return { screenName: urlMatch[1], id: urlMatch[2] };
+      const idMatch = trimmed.match(/(\d{1,25})/);
+      if (idMatch) return { screenName: 'i', id: idMatch[1] };
+      return null;
+    }
+
+    function formatCompactNumber(num) {
+      if (num === null || num === undefined) return '0';
+      const n = Number(num);
+      if (isNaN(n)) return String(num);
+      if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+      if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, '') + 'K';
+      return String(n);
+    }
+
+    function formatDateString(timestampOrStr) {
+      const d = new Date(timestampOrStr);
+      if (isNaN(d.getTime())) return '10:38 AM · Nov 16, 2026';
+      const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const dateStr = d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      return `${timeStr} · ${dateStr}`;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function formatTweetBodyHtml(rawText) {
+      const escaped = escapeHtml(rawText);
+      return escaped.replace(
+        /(@[a-zA-Z0-9_]+|#[a-zA-Z0-9_]+|https?:\/\/[^\s]+)/g,
+        '<span class="highlight">$1</span>'
+      );
+    }
+
+    function getInitials(name) {
+      const clean = (name || 'X').trim();
+      const parts = clean.split(/\s+/);
+      if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+      return clean.slice(0, 2).toUpperCase();
+    }
+
+    function showBanner(msg) {
+      statusMessage.textContent = msg;
+      statusBanner.classList.remove('hidden');
+    }
+
+    function hideBanner() {
+      statusBanner.classList.add('hidden');
+    }
+
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.remove('hidden');
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 2600);
+    }
+
+    async function loadTweet(url) {
+      const parsed = parseTweetUrl(url);
+      if (!parsed) {
+        showBanner('Please enter a valid X / Twitter post URL or status ID.');
+        return;
+      }
+
+      fetchBtn.disabled = true;
+      fetchBtn.querySelector('span').textContent = 'Loading...';
+      hideBanner();
+
+      try {
+        const res = await fetch(`https://api.fxtwitter.com/${parsed.screenName}/status/${parsed.id}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data || !data.tweet) throw new Error('No tweet payload');
+        const t = data.tweet;
+
+        const isIvanov =
+          (t.author?.screen_name || '').toLowerCase() === 'ivanovxapu' ||
+          parsed.id === '2122247887505576345';
+
+        const normalized = {
+          id: t.id || parsed.id,
+          text: t.text || '',
+          created_timestamp: t.created_timestamp ? t.created_timestamp * 1000 : t.created_at,
+          author: {
+            name: t.author?.name || parsed.screenName,
+            screen_name: t.author?.screen_name || parsed.screenName,
+            avatar_url: isIvanov
+              ? '/avatar-ivanovxapu.jpg'
+              : (t.author?.avatar_url || '')
+                  .replace('_normal.', '_400x400.')
+                  .replace('_200x200.', '_400x400.'),
+            verified: Boolean(t.author?.verification?.verified ?? true),
+          },
+          metrics: {
+            replies: t.replies ?? 0,
+            retweets: t.retweets ?? 0,
+            likes: t.likes ?? 0,
+            views: t.views ?? 0,
+          },
+          photos: t.media?.photos || [],
+          videos: t.media?.videos || [],
+          quote: t.quote
+            ? {
+                author: {
+                  name: t.quote.author?.name || 'User',
+                  screen_name: t.quote.author?.screen_name || 'user',
+                },
+                text: t.quote.text || '',
+              }
+            : null,
+        };
+
+        renderTweetToCard(normalized);
+      } catch (err) {
+        if (SEEDED_TWEETS[parsed.id]) {
+          renderTweetToCard(SEEDED_TWEETS[parsed.id]);
+        } else {
+          showBanner('Could not reach live post API; click any field on the card to edit directly.');
+        }
+      } finally {
+        fetchBtn.disabled = false;
+        fetchBtn.querySelector('span').textContent = 'Load Post';
+      }
+    }
+
+    function renderTweetToCard(tweet) {
+      currentTweetId = tweet.id || 'post';
+      const authorName = tweet.author?.name || 'User';
+      const screenName = tweet.author?.screen_name || 'user';
+
+      cardName.textContent = authorName;
+      cardHandle.textContent = `@${screenName.replace(/^@/, '')}`;
+      cardWatermark.textContent = `x.com/${screenName.replace(/^@/, '')}`;
+
+      avatarFallback.textContent = getInitials(authorName);
+      if (tweet.author?.avatar_url) {
+        cardAvatar.src = tweet.author.avatar_url;
+        cardAvatar.classList.remove('hidden');
+        avatarFallback.classList.add('hidden');
+        cardAvatar.onerror = () => {
+          cardAvatar.classList.add('hidden');
+          avatarFallback.classList.remove('hidden');
+        };
+      } else {
+        cardAvatar.classList.add('hidden');
+        avatarFallback.classList.remove('hidden');
+      }
+
+      toggleVerified.checked = Boolean(tweet.author?.verified ?? true);
+      cardVerified.classList.toggle('hidden', !toggleVerified.checked);
+
+      cardText.innerHTML = formatTweetBodyHtml(tweet.text || '');
+
+      if (tweet.quote && tweet.quote.text) {
+        quoteName.textContent = tweet.quote.author?.name || 'User';
+        quoteHandle.textContent = `@${(tweet.quote.author?.screen_name || 'user').replace(/^@/, '')}`;
+        quoteText.textContent = tweet.quote.text;
+        cardQuote.classList.remove('hidden');
+      } else {
+        cardQuote.classList.add('hidden');
+      }
+
+      const firstPhoto = tweet.photos && tweet.photos[0] ? tweet.photos[0].url : null;
+      const firstVideoThumb =
+        tweet.videos && tweet.videos[0] ? tweet.videos[0].thumbnail_url : null;
+      const mediaUrl = firstPhoto || firstVideoThumb;
+
+      if (mediaUrl) {
+        hasMediaAttachment = true;
+        cardMediaImg.src = mediaUrl;
+        cardMediaContainer.classList.toggle('hidden', !toggleMedia.checked);
+      } else {
+        hasMediaAttachment = false;
+        cardMediaImg.src = '';
+        cardMediaContainer.classList.add('hidden');
+      }
+
+      cardDate.textContent = formatDateString(tweet.created_timestamp || tweet.created_at);
+      metricReplies.textContent = formatCompactNumber(tweet.metrics?.replies ?? 0);
+      metricRetweets.textContent = formatCompactNumber(tweet.metrics?.retweets ?? 0);
+      metricLikes.textContent = formatCompactNumber(tweet.metrics?.likes ?? 0);
+      metricViews.textContent = formatCompactNumber(tweet.metrics?.views ?? 0);
+    }
+
+    urlForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      loadTweet(urlInput.value.trim());
+    });
+
+    clearBtn.addEventListener('click', () => {
+      urlInput.value = '';
+      urlInput.focus();
+    });
+
+    closeBannerBtn.addEventListener('click', hideBanner);
+
+    async function discoverAndLoadLatestIvanovTweet() {
+      const syncBtn = document.getElementById('sync-latest-btn');
+      if (syncBtn) syncBtn.textContent = 'Syncing...';
+      try {
+        const res = await fetch('https://r.jina.ai/https://x.com/IvanovXapu', {
+          headers: { 'X-Return-Format': 'html' },
+        });
+        if (res.ok) {
+          const html = await res.text();
+          const matches = [
+            ...html.matchAll(/(?:IvanovXapu\/status\/|in_reply_to=)(\d{15,25})/gi),
+          ].map((m) => m[1]);
+          if (matches.length > 0) {
+            const newestId = matches.sort((a, b) => (BigInt(b) > BigInt(a) ? 1 : -1))[0];
+            const newestUrl = `https://x.com/IvanovXapu/status/${newestId}`;
+            urlInput.value = newestUrl;
+            await loadTweet(newestUrl);
+            return;
+          }
+        }
+      } catch (_) {
+        // Fallback to current input URL
+      } finally {
+        if (syncBtn) syncBtn.textContent = '↻ Sync Latest';
+      }
+      await loadTweet(urlInput.value.trim());
+    }
+
+    document.getElementById('sync-latest-btn')?.addEventListener('click', () => {
+      discoverAndLoadLatestIvanovTweet();
+    });
+
+    document.querySelectorAll('.pill-btn[data-url]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const u = btn.getAttribute('data-url');
+        urlInput.value = u;
+        loadTweet(u);
+      });
+    });
+
+    bgSwatches.addEventListener('click', (e) => {
+      const swatch = e.target.closest('.swatch');
+      if (!swatch) return;
+      bgSwatches.querySelectorAll('.swatch').forEach((s) => s.classList.remove('active'));
+      swatch.classList.add('active');
+      exportCanvas.style.background = swatch.getAttribute('data-bg');
+    });
+
+    themeControl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.seg-btn');
+      if (!btn) return;
+      themeControl.querySelectorAll('.seg-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      tweetCard.className = `tweet-card theme-${btn.getAttribute('data-theme')}`;
+    });
+
+    ratioControl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.seg-btn');
+      if (!btn) return;
+      ratioControl.querySelectorAll('.seg-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      exportCanvas.className = `export-canvas ratio-${btn.getAttribute('data-ratio')}`;
+    });
+
+    paddingSlider.addEventListener('input', () => {
+      const v = `${paddingSlider.value}px`;
+      paddingVal.textContent = v;
+      document.documentElement.style.setProperty('--card-padding', v);
+    });
+
+    widthSlider.addEventListener('input', () => {
+      const v = `${widthSlider.value}px`;
+      widthVal.textContent = v;
+      document.documentElement.style.setProperty('--card-width', v);
+    });
+
+    fontSlider.addEventListener('input', () => {
+      const v = `${fontSlider.value}px`;
+      fontVal.textContent = v;
+      document.documentElement.style.setProperty('--card-font-size', v);
+    });
+
+    toggleVerified.addEventListener('change', () => {
+      cardVerified.classList.toggle('hidden', !toggleVerified.checked);
+    });
+
+    toggleLogo.addEventListener('change', () => {
+      cardLogo.classList.toggle('hidden', !toggleLogo.checked);
+    });
+
+    toggleMedia.addEventListener('change', () => {
+      if (hasMediaAttachment) {
+        cardMediaContainer.classList.toggle('hidden', !toggleMedia.checked);
+      }
+    });
+
+    toggleDate.addEventListener('change', () => {
+      cardDate.classList.toggle('hidden', !toggleDate.checked);
+    });
+
+    toggleMetrics.addEventListener('change', () => {
+      cardMetrics.classList.toggle('hidden', !toggleMetrics.checked);
+    });
+
+    toggleWatermark.addEventListener('change', () => {
+      cardWatermark.classList.toggle('hidden', !toggleWatermark.checked);
+    });
+
+    avatarWrap.addEventListener('click', () => uploadAvatar.click());
+
+    uploadAvatar.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        cardAvatar.src = reader.result;
+        cardAvatar.classList.remove('hidden');
+        avatarFallback.classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    uploadMedia.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        hasMediaAttachment = true;
+        toggleMedia.checked = true;
+        cardMediaImg.src = reader.result;
+        cardMediaContainer.classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    });
+
+    async function inlineAllImages(rootEl) {
+      const imgs = Array.from(rootEl.querySelectorAll('img'));
+      await Promise.all(
+        imgs.map(async (img) => {
+          if (!img.src || img.src.startsWith('data:') || img.classList.contains('hidden')) return;
+          try {
+            const res = await fetch(img.src, { mode: 'cors' });
+            const blob = await res.blob();
+            const dataUrl = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result);
+              reader.readAsDataURL(blob);
+            });
+            img.src = dataUrl;
+          } catch (e) {
+            // Keep existing src if inlining fails
+          }
+        })
+      );
+    }
+
+    async function renderNodeToCanvas(node, scale = 2.5) {
+      await inlineAllImages(node);
+      const rect = node.getBoundingClientRect();
+      const width = Math.round(rect.width);
+      const height = Math.round(rect.height);
+
+      const clone = node.cloneNode(true);
+      function copyComputedStyles(src, dest) {
+        const computed = window.getComputedStyle(src);
+        let cssText = '';
+        for (let i = 0; i < computed.length; i++) {
+          const prop = computed[i];
+          cssText += `${prop}:${computed.getPropertyValue(prop)};`;
+        }
+        dest.style.cssText = cssText;
+        for (let i = 0; i < src.children.length; i++) {
+          if (dest.children[i]) copyComputedStyles(src.children[i], dest.children[i]);
+        }
+      }
+      copyComputedStyles(node, clone);
+      clone.style.margin = '0';
+
+      const xml = new XMLSerializer().serializeToString(clone);
+      const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%">${xml}</foreignObject></svg>`;
+      const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = svgUrl;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(width * scale);
+      canvas.height = Math.round(height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0);
+      return canvas;
+    }
+
+    downloadBtn.addEventListener('click', async () => {
+      const origText = downloadBtn.querySelector('span').textContent;
+      downloadBtn.querySelector('span').textContent = 'Exporting...';
+      downloadBtn.disabled = true;
+      try {
+        const canvas = await renderNodeToCanvas(exportCanvas, 2.5);
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        const cleanHandle = (cardHandle.textContent || 'x').replace(/[^a-zA-Z0-9_-]/g, '');
+        link.download = `x-card-${cleanHandle}-${currentTweetId}.png`;
+        link.href = dataUrl;
+        link.click();
+        showToast('Card downloaded as high-res PNG!');
+      } catch (err) {
+        showBanner(`Failed to export image: ${err.message}`);
+      } finally {
+        downloadBtn.querySelector('span').textContent = origText;
+        downloadBtn.disabled = false;
+      }
+    });
+
+    copyImgBtn.addEventListener('click', async () => {
+      const origText = copyImgBtn.querySelector('span').textContent;
+      copyImgBtn.querySelector('span').textContent = 'Copying...';
+      copyImgBtn.disabled = true;
+      try {
+        const canvas = await renderNodeToCanvas(exportCanvas, 2.5);
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error('Could not generate image blob');
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        showToast('Card image copied to clipboard!');
+      } catch (err) {
+        showBanner(`Clipboard copy failed: ${err.message}`);
+      } finally {
+        copyImgBtn.querySelector('span').textContent = origText;
+        copyImgBtn.disabled = false;
+      }
+    });
+
+    // Check query param ?text=... or ?url=... or auto-discover newest @IvanovXapu tweet
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const paramText = params.get('text');
+      const paramUrl = params.get('url');
+
+      if (paramText) {
+        renderTweetToCard({
+          id: 'advent-summary',
+          text: paramText,
+          created_timestamp: Date.now(),
+          author: {
+            name: 'Hristiqn',
+            screen_name: 'IvanovXapu',
+            avatar_url: '/avatar-ivanovxapu.jpg',
+            verified: true,
+          },
+          metrics: { replies: 12, retweets: 48, likes: 215, views: 4800 },
+          photos: [],
+          videos: [],
+          quote: null,
+        });
+        showBanner('Loaded blog post social summary into X Card Studio — click any text to tweak before exporting!');
+      } else if (paramUrl) {
+        urlInput.value = paramUrl;
+        loadTweet(paramUrl);
+      } else {
+        discoverAndLoadLatestIvanovTweet();
+      }
+    });
+  </script>
+</BaseLayout>

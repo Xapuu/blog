@@ -1,0 +1,98 @@
+---
+import { getCollection, type CollectionEntry } from 'astro:content';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PostCard from '@components/PostCard.astro';
+import { isPostVisible } from '@components/postVisibility';
+
+export async function getStaticPaths() {
+  const allPosts = (await getCollection('blog', (post) => isPostVisible(post))).sort(
+    (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+  );
+
+  const tagCounts = allPosts.reduce<Record<string, number>>((acc, post) => {
+    for (const t of post.data.tags) {
+      acc[t] = (acc[t] ?? 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  const uniqueTags = Object.keys(tagCounts).sort(
+    (a, b) => (tagCounts[b] ?? 0) - (tagCounts[a] ?? 0) || a.localeCompare(b)
+  );
+  const topFiveTags = uniqueTags.slice(0, 5);
+
+  return uniqueTags.map((tag) => {
+    const filteredPosts = allPosts.filter((post) => post.data.tags.includes(tag));
+    const displayTags = topFiveTags.includes(tag)
+      ? topFiveTags
+      : [...topFiveTags.slice(0, 4), tag];
+
+    return {
+      params: { tag },
+      props: {
+        tag,
+        posts: filteredPosts,
+        allTags: displayTags,
+        totalPostsCount: allPosts.length,
+      },
+    };
+  });
+}
+
+interface Props {
+  tag: string;
+  posts: CollectionEntry<'blog'>[];
+  allTags: string[];
+  totalPostsCount: number;
+}
+
+const { tag, posts, allTags, totalPostsCount } = Astro.props;
+---
+
+<BaseLayout
+  title={`Posts tagged #${tag}`}
+  description={`Articles tagged with #${tag} by Hristiyan Hristov.`}
+>
+  <header class="border-b border-border pb-8">
+    <div class="flex items-center gap-2 font-mono text-xs text-gray-400">
+      <a href="/blog" class="transition-colors hover:text-accent">&larr; All Posts</a>
+      <span>/</span>
+      <span class="text-accent">#{tag}</span>
+    </div>
+
+    <h1 class="mt-3 text-3xl font-bold tracking-tight text-gray-100 sm:text-4xl">
+      Topic: <span class="font-mono text-accent">#{tag}</span>
+    </h1>
+    <p class="mt-2 font-mono text-xs text-gray-400">
+      Showing {posts.length} {posts.length === 1 ? 'article' : 'articles'} tagged with #{tag}
+    </p>
+
+    <div class="mt-6 flex flex-wrap gap-2">
+      <a
+        href="/blog"
+        class="rounded border border-border bg-surface px-2.5 py-1 font-mono text-xs text-gray-300 transition-colors hover:border-accent/50 hover:text-accent"
+      >
+        All ({totalPostsCount})
+      </a>
+      {
+        allTags.map((t) => (
+          <a
+            href={`/tags/${t}`}
+            class:list={[
+              'rounded border px-2.5 py-1 font-mono text-xs transition-colors',
+              t === tag
+                ? 'border-accent bg-emerald-500/10 font-medium text-accent'
+                : 'border-border bg-surface text-gray-300 hover:border-accent/50 hover:text-accent',
+            ]}
+          >
+            #{t}
+          </a>
+        ))
+      }
+    </div>
+  </header>
+
+  <section class="mt-8 space-y-4">
+    {posts.map((post) => <PostCard post={post} />)}
+  </section>
+</BaseLayout>

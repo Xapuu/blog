@@ -1,0 +1,125 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PostCard from '@components/PostCard.astro';
+import LatestTweetPreview from '@components/LatestTweetPreview.astro';
+import { isPostVisible } from '@components/postVisibility';
+
+const allPosts = (await getCollection('blog', (post) => isPostVisible(post))).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+const latestPosts = allPosts.slice(0, 5);
+const adventPostsCount = allPosts.filter((p) => p.data.series === 'advent-2026').length;
+---
+
+<BaseLayout
+  title="Hristiyan Hristov — JavaScript Team Lead & Frontend Architect"
+  description="Personal developer portfolio and technical blog of Hristiyan Hristov — JavaScript Team Lead, Frontend Architect, and Security-Minded Engineer based in Sofia, Bulgaria."
+>
+  <!-- Hero Section -->
+  <section class="pb-10 pt-2">
+    <div class="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 font-mono text-xs text-gray-300">
+      <span class="h-2 w-2 rounded-full bg-accent"></span>
+      <span>Sofia, Bulgaria &bull; Frontend &amp; Application Security</span>
+    </div>
+
+    <h1 class="mt-5 text-3xl font-bold tracking-tight text-gray-100 sm:text-5xl">
+      Hristiyan Hristov
+    </h1>
+
+    <p class="mt-2 font-mono text-sm font-medium text-accent sm:text-base">
+      JavaScript Team Lead &bull; Frontend Architect &bull; Security-Minded Engineer
+    </p>
+
+    <p class="mt-5 max-w-2xl text-base leading-relaxed text-gray-300 sm:text-lg">
+      I design resilient web architectures, lead high-performing engineering teams, and harden
+      modern JavaScript applications against real-world supply-chain and client-side threats.
+      Advocate for zero-bloat defaults, strict type safety, and defense-in-depth browser security.
+    </p>
+
+    <div class="mt-6 flex flex-wrap items-center gap-3 font-mono text-xs">
+      <a
+        href="/blog"
+        class="inline-flex items-center gap-2 rounded-md bg-accent px-4 py-2 font-semibold text-canvas transition-colors hover:bg-accent-hover"
+      >
+        <span>Read the Blog</span>
+        <span aria-hidden="true">&rarr;</span>
+      </a>
+      <a
+        href="/advent-2026"
+        class="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 font-medium text-gray-200 transition-colors hover:border-accent/50 hover:text-accent"
+      >
+        <span>2026 DevSec Advent</span>
+      </a>
+      <a
+        href="/x-export"
+        class="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-4 py-2 font-medium text-gray-200 transition-colors hover:border-accent/50 hover:text-accent"
+      >
+        <span>X Card Studio</span>
+      </a>
+      <a
+        href="/rss.xml"
+        class="inline-flex items-center gap-1.5 rounded-md border border-border bg-canvas px-3 py-2 text-gray-400 transition-colors hover:border-gray-700 hover:text-gray-200"
+      >
+        <span>RSS Feed</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- Latest Tweet Preview (@IvanovXapu) -->
+  <LatestTweetPreview />
+
+  <!-- 2026 DevSec Advent Calendar Highlight Banner -->
+  <section class="my-6">
+    <a
+      href="/advent-2026"
+      class="group block rounded-xl border border-emerald-500/30 bg-gradient-to-br from-surface via-surface to-emerald-950/30 p-6 transition-all hover:border-accent"
+    >
+      <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div class="space-y-2">
+          <div class="flex items-center gap-2.5 font-mono text-xs text-accent">
+            <span class="rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-semibold uppercase">
+              Featured Series
+            </span>
+            <span>{adventPostsCount}/24 Days Unlocked</span>
+          </div>
+
+          <h2 class="text-xl font-bold tracking-tight text-gray-100 transition-colors group-hover:text-accent sm:text-2xl">
+            2026 DevSec Advent Calendar
+          </h2>
+
+          <p class="max-w-2xl text-sm leading-relaxed text-gray-300">
+            24 days of pragmatic application security for frontend &amp; full-stack engineers:
+            Content Security Policy deep-dives, subresource integrity, browser isolation headers,
+            and supply-chain defense patterns.
+          </p>
+        </div>
+
+        <div class="shrink-0">
+          <span class="inline-flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 font-mono text-xs font-semibold text-accent transition-colors group-hover:bg-accent group-hover:text-canvas">
+            <span>Explore 24-Day Hub</span>
+            <span aria-hidden="true">&rarr;</span>
+          </span>
+        </div>
+      </div>
+    </a>
+  </section>
+
+  <!-- Latest 5 Published Blog Posts -->
+  <section class="mt-12">
+    <div class="mb-6 flex items-baseline justify-between border-b border-border pb-3">
+      <h2 class="text-xl font-bold tracking-tight text-gray-100">Latest Articles</h2>
+      <a
+        href="/blog"
+        class="font-mono text-xs text-gray-400 transition-colors hover:text-accent"
+      >
+        View all ({allPosts.length}) &rarr;
+      </a>
+    </div>
+
+    <div class="space-y-4">
+      {latestPosts.map((post) => <PostCard post={post} />)}
+    </div>
+  </section>
+</BaseLayout>

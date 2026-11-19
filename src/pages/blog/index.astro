@@ -1,0 +1,65 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PostCard from '@components/PostCard.astro';
+import { isPostVisible } from '@components/postVisibility';
+
+const posts = (await getCollection('blog', (post) => isPostVisible(post))).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+const tagCounts = posts.reduce<Record<string, number>>((acc, post) => {
+  for (const tag of post.data.tags) {
+    acc[tag] = (acc[tag] ?? 0) + 1;
+  }
+  return acc;
+}, {});
+
+const topTags = Object.keys(tagCounts)
+  .sort((a, b) => (tagCounts[b] ?? 0) - (tagCounts[a] ?? 0) || a.localeCompare(b))
+  .slice(0, 5);
+---
+
+<BaseLayout
+  title="All Posts — Technical Blog"
+  description="Chronological archive of articles on JavaScript architecture, frontend engineering, and web application security by Hristiyan Hristov."
+>
+  <header class="border-b border-border pb-8">
+    <p class="font-mono text-xs uppercase tracking-wider text-accent">Archive</p>
+    <h1 class="mt-2 text-3xl font-bold tracking-tight text-gray-100 sm:text-4xl">
+      All Technical Posts
+    </h1>
+    <p class="mt-3 max-w-2xl text-sm leading-relaxed text-gray-400 sm:text-base">
+      Deep dives into frontend architecture, browser security headers, supply-chain hardening, and
+      engineering leadership.
+    </p>
+
+    {
+      topTags.length > 0 && (
+        <div class="mt-6">
+          <p class="mb-2.5 font-mono text-xs text-gray-400">Filter by top topics:</p>
+          <div class="flex flex-wrap gap-2">
+            <a
+              href="/blog"
+              class="rounded border border-accent bg-emerald-500/10 px-2.5 py-1 font-mono text-xs font-medium text-accent"
+            >
+              All ({posts.length})
+            </a>
+            {topTags.map((tag) => (
+              <a
+                href={`/tags/${tag}`}
+                class="rounded border border-border bg-surface px-2.5 py-1 font-mono text-xs text-gray-300 transition-colors hover:border-accent/50 hover:text-accent"
+              >
+                #{tag} ({tagCounts[tag]})
+              </a>
+            ))}
+          </div>
+        </div>
+      )
+    }
+  </header>
+
+  <section class="mt-8 space-y-4">
+    {posts.map((post) => <PostCard post={post} />)}
+  </section>
+</BaseLayout>

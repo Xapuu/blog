@@ -1,0 +1,6 @@
+# RFC 9116 security.txt for hristov.dev
+Contact: mailto:xapu.ivanov@gmail.com
+Contact: https://x.com/IvanovXapu
+Canonical: https://hristov.dev/.well-known/security.txt
+Preferred-Languages: en, bg
+Expires: 2027-12-31T23:59:59.000Z
