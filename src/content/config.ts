@@ -11,6 +11,7 @@ const blog = defineCollection({
     series: z.enum(['general', 'advent-2026']).default('general'),
     adventDay: z.number().min(1).max(24).optional(),
     draft: z.boolean().default(false),
+    socialSummary: z.string().optional(),
   }),
 });
 

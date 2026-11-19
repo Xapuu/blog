@@ -19,6 +19,14 @@ const formattedUpdatedDate = updatedDate ? formatDate(updatedDate) : null;
 const adventDayFormatted = adventDay ? String(adventDay).padStart(2, '0') : '01';
 const socialSummary = extractSocialSummary(post);
 const xStudioUrl = `/x-export?text=${encodeURIComponent(socialSummary)}`;
+const prevDayLabel =
+  prevPost?.data.series === 'advent-2026' && typeof prevPost.data.adventDay === 'number'
+    ? `← Day ${String(prevPost.data.adventDay).padStart(2, '0')}`
+    : '← Previous Post';
+const nextDayLabel =
+  nextPost?.data.series === 'advent-2026' && typeof nextPost.data.adventDay === 'number'
+    ? `Day ${String(nextPost.data.adventDay).padStart(2, '0')} →`
+    : 'Next Post →';
 ---
 
 <BaseLayout
@@ -59,9 +67,9 @@ const xStudioUrl = `/x-export?text=${encodeURIComponent(socialSummary)}`;
         <a
           href={xStudioUrl}
           class="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 font-mono text-xs text-gray-300 transition-colors hover:border-accent hover:text-accent"
-          title="Load this article's social summary directly into X Card Studio"
+          title="Load this article's social summary into X Card Studio"
         >
-          <span>Open Summary in X Studio &rarr;</span>
+          <span>{import.meta.env.DEV ? 'Open Summary in X Studio →' : 'Share Card in X Studio →'}</span>
         </a>
       </div>
     </div>
@@ -125,7 +133,7 @@ const xStudioUrl = `/x-export?text=${encodeURIComponent(socialSummary)}`;
               href={`/blog/${prevPost.slug}`}
               class="group flex flex-col justify-between rounded-lg border border-border bg-surface p-4 transition-colors hover:border-gray-700 hover:bg-surface-hover"
             >
-              <span class="font-mono text-xs text-gray-400">&larr; Previous Post</span>
+              <span class="font-mono text-xs text-gray-400">{prevDayLabel}</span>
               <span class="mt-1.5 font-medium text-gray-200 transition-colors group-hover:text-accent">
                 {prevPost.data.title}
               </span>
@@ -139,7 +147,7 @@ const xStudioUrl = `/x-export?text=${encodeURIComponent(socialSummary)}`;
               href={`/blog/${nextPost.slug}`}
               class="group flex flex-col justify-between rounded-lg border border-border bg-surface p-4 text-left transition-colors hover:border-gray-700 hover:bg-surface-hover sm:text-right"
             >
-              <span class="font-mono text-xs text-gray-400">Next Post &rarr;</span>
+              <span class="font-mono text-xs text-gray-400">{nextDayLabel}</span>
               <span class="mt-1.5 font-medium text-gray-200 transition-colors group-hover:text-accent">
                 {nextPost.data.title}
               </span>

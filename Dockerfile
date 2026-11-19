@@ -1,4 +1,6 @@
 # Stage 1: Build Astro static site with Node 22 LTS (Day 13 & Day 14 best practices)
+# Tip (Day 16): Pin base images to immutable @sha256 digests in CI via Renovate/Dependabot
+# (`docker buildx imagetools inspect node:22-alpine --format "{{.Manifest.Digest}}"`).
 FROM node:22-alpine AS builder
 
 WORKDIR /app

@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Node 22 LTS
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -34,9 +34,11 @@ jobs:
           ENFORCE_PUBDATE_GATE: 'true'
         run: npm run build
 
+      # Tip (Day 11): Migrate FIREBASE_SERVICE_ACCOUNT to GCP Workload Identity Federation (OIDC)
+      # via google-github-actions/auth once your GCP Workload Identity Pool is configured.
       - name: Deploy to Firebase Hosting
         if: ${{ env.FIREBASE_SERVICE_ACCOUNT != '' }}
-        uses: FirebaseExtended/action-hosting-deploy@v0
+        uses: FirebaseExtended/action-hosting-deploy@500ac625ca2dd40cbd15f7659af953801858032a # v0.11.0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

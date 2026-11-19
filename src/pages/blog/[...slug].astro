@@ -4,18 +4,27 @@ import BlogPostLayout from '@layouts/BlogPostLayout.astro';
 import { isPostVisible } from '@components/postVisibility';
 
 export async function getStaticPaths() {
-  const posts = (await getCollection('blog', (post) => isPostVisible(post))).sort(
-    (a, b) => a.data.pubDate.valueOf() - b.data.pubDate.valueOf()
-  );
+  const posts = await getCollection('blog', (post) => isPostVisible(post));
 
-  return posts.map((post, index) => ({
-    params: { slug: post.slug },
-    props: {
-      post,
-      prevPost: index > 0 ? posts[index - 1] : null,
-      nextPost: index < posts.length - 1 ? posts[index + 1] : null,
-    },
-  }));
+  const adventPosts = posts
+    .filter((p) => p.data.series === 'advent-2026')
+    .sort((a, b) => (a.data.adventDay ?? 0) - (b.data.adventDay ?? 0));
+
+  const generalPosts = posts
+    .filter((p) => p.data.series !== 'advent-2026')
+    .sort((a, b) => a.data.pubDate.valueOf() - b.data.pubDate.valueOf());
+
+  const makeEntries = (list: CollectionEntry<'blog'>[]) =>
+    list.map((post, index) => ({
+      params: { slug: post.slug },
+      props: {
+        post,
+        prevPost: index > 0 ? list[index - 1] : null,
+        nextPost: index < list.length - 1 ? list[index + 1] : null,
+      },
+    }));
+
+  return [...makeEntries(adventPosts), ...makeEntries(generalPosts)];
 }
 
 interface Props {

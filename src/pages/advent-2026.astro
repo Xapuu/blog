@@ -2,7 +2,7 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
 import BaseLayout from '@layouts/BaseLayout.astro';
 import { formatDate, getReadingTime } from '@components/readingTime';
-import { isPostVisible } from '@components/postVisibility';
+import { isPostPublished, isPostVisible } from '@components/postVisibility';
 
 const allAdventPosts = await getCollection(
   'blog',
@@ -62,7 +62,7 @@ const weeks = [
   },
 ];
 
-const publishedCount = days.filter((d) => d.post && !d.post.data.draft).length;
+const publishedCount = days.filter((d) => d.post && isPostPublished(d.post)).length;
 const progressPercentage = Math.round((publishedCount / 24) * 100);
 ---
 
@@ -92,8 +92,8 @@ const progressPercentage = Math.round((publishedCount / 24) * 100);
 
     <p class="mt-3 max-w-3xl text-base leading-relaxed text-gray-300">
       Twenty-four focused security briefs for frontend, Node.js, and DevOps engineers. Each door
-      explores a concrete attack vector backed by real-world 2026 breach receipts, why default
-      configurations fail, and a production-ready fix you can ship in minutes.
+      explores a concrete attack vector backed by real-world incidents &amp; advisories, why default
+      configurations fail, and a production-ready fix you can verify and ship in minutes.
     </p>
 
     <!-- Progress Bar -->

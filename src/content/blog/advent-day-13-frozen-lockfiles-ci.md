@@ -6,6 +6,12 @@ tags: ["security", "npm", "ci-cd", "supply-chain"]
 series: "advent-2026"
 adventDay: 13
 draft: true
+socialSummary: |
+  If your Dockerfile or CI pipeline runs `npm install` instead of `npm ci`, your production build isn't deterministic.
+
+  A compromised transitive dependency publishing a patch release (`1.2.4` -> `1.2.5`) can slip straight into your build without a single line of code changing in your repo.
+
+  Day 13/24 of the 2026 DevSec Advent Calendar: enforcing `npm ci` and `--frozen-lockfile`.
 ---
 
 In almost every `package.json`, dependencies are declared with caret (`^1.4.0`) or tilde (`~1.4.0`) ranges. That range syntax tells the package manager: *"Any compatible minor or patch version published in the future is acceptable."*
@@ -14,14 +20,16 @@ What actually pins your build to the exact tarball and SHA-512 integrity hash yo
 
 Yet countless `Dockerfile` and CI/CD configurations still run `npm install` instead of `npm ci`.
 
+> **Real-World Receipt:** In repeated npm maintainer account takeovers (including `ua-parser-js`, `coa`, `rc`, and recent malicious patch releases on widely used linter and utility packages), attackers published a trojanized patch version (`x.y.z+1`). Teams using frozen lockfiles in CI stayed untouched. Teams running `npm install` without a lockfile check silently shipped the compromised tarball into production.
+
 ---
 
 ## Why `npm install` in CI or Docker Is Dangerous
 
 When you run `npm install` (as opposed to `npm ci`):
 
-1. If `package.json` and `package-lock.json` are slightly out of sync—or if a transitive sub-dependency range resolves to a newly published patch version—`npm install` **mutates the dependency tree on the fly**.
-2. If an attacker hijacks a maintainer's npm account at 02:00 UTC and publishes `some-transitive-pkg@1.4.9` with a credential stealer, the very next CI build running `npm install` without a strict lockfile check can pull the malicious version straight into production—with zero changes to your git repository!
+1. If `package.json` and `package-lock.json` are slightly out of sync, or if a transitive sub-dependency range resolves to a newly published patch version, `npm install` **mutates the dependency tree on the fly**.
+2. If an attacker hijacks a maintainer's npm account at 02:00 UTC and publishes `some-transitive-pkg@1.4.9` with a credential stealer, the very next CI build running `npm install` without a strict lockfile check can pull the malicious version straight into production with zero changes to your git repository.
 
 ---
 
@@ -35,6 +43,8 @@ When you run `npm install` (as opposed to `npm ci`):
 | **pnpm** | `pnpm install` | `pnpm install --frozen-lockfile` |
 | **Yarn (Berry)** | `yarn install` | `yarn install --immutable` |
 | **Bun** | `bun install` | `bun install --frozen-lockfile` |
+
+Pair `npm ci` with `--ignore-scripts` ([Day 14](/blog/advent-day-14-npm-lifecycle-scripts)) and pinned base images ([Day 16](/blog/advent-day-16-pin-docker-digests)):
 
 ```dockerfile
 # Hardened multi-stage Dockerfile dependency layer
@@ -52,18 +62,28 @@ RUN npm ci --ignore-scripts
 
 Every entry in `package-lock.json` v3 includes a `resolved` URL and a cryptographic `integrity: "sha512-..."` digest. Treat `package-lock.json` diffs in pull requests as security-critical: verify that all `resolved` URLs point to `https://registry.npmjs.org/` (never an arbitrary third-party tarball URL).
 
+---
+
+## Verify It in 60 Seconds
+
+Hunt for non-deterministic `npm install` calls in your Dockerfiles and CI pipelines, and verify no unexpected registry URLs exist in `package-lock.json`:
+
+```bash
+# 1. Find unsafe 'npm install' commands in Dockerfiles and CI workflows
+grep -rnE "(npm|pnpm|yarn|bun) install" Dockerfile* .github/workflows/ .gitlab-ci.yml 2>/dev/null
+
+# 2. Verify every resolved tarball in package-lock.json comes from the official npm registry
+jq -r '.packages[].resolved // empty' package-lock.json | grep -v '^https://registry\.npmjs\.org/'
+# Expected output: empty
+```
+
 ### Key Takeaway for Day 13
 
 Always commit your lockfile (`package-lock.json` / `pnpm-lock.yaml`) to version control, and replace every single `npm install` in your `Dockerfile` and CI/CD pipelines with `npm ci` (or `--frozen-lockfile`).
 
 ---
 
-## Social Summary (X & LinkedIn)
+## References
 
-```text
-If your Dockerfile or CI pipeline runs `npm install` instead of `npm ci`, your production build isn't deterministic.
-
-A compromised transitive dependency publishing a patch release (`1.2.4` -> `1.2.5`) can slip straight into your build without a single line of code changing in your repo.
-
-Day 13/24 of the 2026 DevSec Advent Calendar: Enforcing `npm ci` and `--frozen-lockfile`.
-```
+- [npm Docs: `npm ci` Clean Install](https://docs.npmjs.com/cli/v10/commands/npm-ci)
+- [pnpm Docs: `pnpm install --frozen-lockfile`](https://pnpm.io/cli/install#--frozen-lockfile)

